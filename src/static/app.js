@@ -24,7 +24,18 @@ function displayActivities(activities) {
     const card = document.createElement("div");
     card.className = "activity-card";
 
-    const participantsList = activityData.participants.map((p) => `<li>${p}</li>`).join("");
+    // Render participants with delete icon
+    let participantsList = "";
+    if (activityData.participants.length > 0) {
+      participantsList = activityData.participants.map((p) =>
+        `<li class="participant-item">
+          <span class="participant-email">${p}</span>
+          <span class="delete-icon" title="Remove" data-activity="${activityName}" data-email="${p}">&#128465;</span>
+        </li>`
+      ).join("");
+    } else {
+      participantsList = '<li class="no-participants">No participants yet</li>';
+    }
 
     card.innerHTML = `
       <h4>${activityName}</h4>
@@ -34,17 +45,42 @@ function displayActivities(activities) {
       <div class="participants-section">
         <strong>Current Participants:</strong>
         <ul class="participants-list">
-          ${participantsList || '<li class="no-participants">No participants yet</li>'}
+          ${participantsList}
         </ul>
       </div>
     `;
 
     listContainer.appendChild(card);
   });
+
+  // Add event listeners for delete icons
+  document.querySelectorAll('.delete-icon').forEach(icon => {
+    icon.addEventListener('click', async (e) => {
+      const activity = icon.getAttribute('data-activity');
+      const email = icon.getAttribute('data-email');
+      if (confirm(`Unregister ${email} from ${activity}?`)) {
+        try {
+          const response = await fetch(`/activities/${encodeURIComponent(activity)}/unregister?email=${encodeURIComponent(email)}`, {
+            method: 'DELETE',
+          });
+          if (response.ok) {
+            fetchAndDisplayActivities();
+          } else {
+            const error = await response.json();
+            alert(`Error: ${error.detail}`);
+          }
+        } catch (err) {
+          alert('Error unregistering participant.');
+        }
+      }
+    });
+  });
 }
 
 function populateActivityDropdown(activities) {
   const select = document.getElementById("activity");
+  // Clear existing options except the first placeholder
+  select.length = 1;
   Object.keys(activities).forEach((activityName) => {
     const option = document.createElement("option");
     option.value = activityName;
